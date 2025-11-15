@@ -32,10 +32,10 @@ export const generateStoryAndCover = async (
       - Usa "Narrador:" para las partes descriptivas.
       - Usa "Personaje 1:" para el diálogo del primer personaje.
       - Usa "Personaje 2:" para el diálogo del segundo personaje.
-      Asegúrate de que cada línea de diálogo y narración comience con su etiqueta correspondiente en una nueva línea.
+      Asegúrate de que cada línea de diálogo y narración comience con su etiqueta correspondiente en una nueva línea, y añade un salto de línea extra entre cada bloque de texto para mejorar la legibilidad.
       Idea: "${idea}"`;
     } else {
-      storyPrompt = `Basado en la siguiente idea, crea un título atractivo y ${lengthInstructions[length]} La historia debe ser principalmente descriptiva y narrativa, sin diálogos. La idea es: "${idea}".`;
+      storyPrompt = `Basado en la siguiente idea, crea un título atractivo y ${lengthInstructions[length]} La historia debe ser principalmente descriptiva y narrativa, sin diálogos. Añade saltos de línea extra entre párrafos para mejorar la legibilidad. La idea es: "${idea}".`;
     }
 
     const storyGenerationPromise = ai.models.generateContent({
@@ -161,7 +161,7 @@ export const generateStoryAndCover = async (
         throw new Error("La API no pudo generar los subtítulos.");
     }
 
-    const displayContent = contentForTTS.replace(/(Narrador:|Personaje 1:|Personaje 2:)\s*/g, '');
+    const displayContent = contentForTTS;
 
     return { title, content: displayContent, coverImageUrl, audioBase64, srtContent };
 

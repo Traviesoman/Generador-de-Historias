@@ -174,6 +174,26 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
     }
   };
 
+  const renderStoryContent = () => {
+    return story.content.split('\n').map((line, index) => {
+      if (line.trim() === '') {
+        return null; // Don't render empty lines, spacing is handled by mb-4
+      }
+      const match = line.match(/^(Narrador:|Personaje 1:|Personaje 2:)(.*)/);
+      if (match) {
+        const speaker = match[1];
+        const text = match[2];
+        return (
+          <p key={index} className="mb-4">
+            <strong className="font-bold text-gray-800 dark:text-gray-100">{speaker}</strong>
+            <span>{text}</span>
+          </p>
+        );
+      }
+      return <p key={index} className="mb-4">{line}</p>;
+    });
+  };
+
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
@@ -216,8 +236,8 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
                 )}
             </button>
           </div>
-          <div className="overflow-y-auto max-h-[60vh] pr-4 scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-serif whitespace-pre-wrap">{story.content}</p>
+          <div className="overflow-y-auto max-h-[60vh] pr-4 scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-200 dark:scrollbar-track-gray-800 text-gray-700 dark:text-gray-300 leading-relaxed font-serif">
+            {renderStoryContent()}
           </div>
           <div className="mt-auto pt-6 flex flex-col lg:flex-row items-center justify-center gap-4">
             <button
