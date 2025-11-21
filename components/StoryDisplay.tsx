@@ -4,6 +4,7 @@ import { Story } from '../types';
 interface StoryDisplayProps {
   story: Story;
   onReset: () => void;
+  onRegenerateCover: () => Promise<void>;
 }
 
 // Audio decoding utilities
@@ -37,9 +38,10 @@ async function decodeAudioData(
 }
 
 
-const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
+const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset, onRegenerateCover }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(true);
+  const [isCoverLoading, setIsCoverLoading] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
@@ -131,6 +133,19 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleRegenerateCoverClick = async () => {
+      if (isCoverLoading) return;
+      setIsCoverLoading(true);
+      try {
+          await onRegenerateCover();
+      } catch (error) {
+          // Error handled in parent, but we need to stop loading state
+          console.error(error);
+      } finally {
+          setIsCoverLoading(false);
+      }
+  };
+
   const createWavBlob = (pcmData: Uint8Array) => {
     const numChannels = 1;
     const sampleRate = 24000;
@@ -179,7 +194,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
       if (line.trim() === '') {
         return null; // Don't render empty lines, spacing is handled by mb-4
       }
-      const match = line.match(/^(Narrador:|Personaje 1:|Personaje 2:)(.*)/);
+      const match = line.match(/^(Narrador:|Personaje:|Personaje 1:|Personaje 2:)(.*)/);
       if (match) {
         const speaker = match[1];
         const text = match[2];
@@ -198,13 +213,31 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story, onReset }) => {
   return (
     <div className="w-full max-w-5xl mx-auto animate-fade-in">
       <div className="bg-white dark:bg-gray-800 shadow-xl dark:shadow-2xl rounded-lg overflow-hidden md:flex">
-        <div className="md:w-1/3">
-          <img
-            src={story.coverImageUrl}
-            alt={`Portada para ${story.title}`}
-            className="w-full h-full object-cover"
-          />
+        <div className="md:w-1/3 bg-gray-100 dark:bg-gray-900 flex flex-col">
+          <div className="relative w-full aspect-[3/4] group">
+            <img
+                src={story.coverImageUrl}
+                alt={`Portada para ${story.title}`}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${isCoverLoading ? 'opacity-50' : 'opacity-100'}`}
+            />
+            {isCoverLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            )}
+          </div>
+          <button
+             onClick={handleRegenerateCoverClick}
+             disabled={isCoverLoading}
+             className="w-full py-3 px-4 bg-gray-50 dark:bg-gray-700 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border-t border-gray-200 dark:border-gray-600 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+              <svg className={`w-4 h-4 ${isCoverLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {isCoverLoading ? "Generando..." : "Generar otra portada"}
+          </button>
         </div>
+        
         <div className="p-6 md:p-8 md:w-2/3 flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <h2 className="text-3xl md:text-4xl font-bold font-serif text-gray-900 dark:text-white">{story.title}</h2>

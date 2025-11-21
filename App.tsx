@@ -2,13 +2,14 @@ import React, { useState, useCallback } from 'react';
 import StoryInputForm from './components/StoryInputForm';
 import StoryDisplay from './components/StoryDisplay';
 import LoadingView from './components/LoadingView';
-import { generateStoryAndCover } from './services/geminiService';
+import { generateStoryAndCover, regenerateCoverImage } from './services/geminiService';
 import { Story, StoryLength, VoiceStyle } from './types';
 import ThemeSwitcher from './components/ThemeSwitcher';
 
 const App: React.FC = () => {
   const [story, setStory] = useState<Story | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [progress, setProgress] = useState<{ message: string; value: number }>({ message: '', value: 0 });
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerateStory = useCallback(async (
@@ -16,14 +17,22 @@ const App: React.FC = () => {
     includeDialogues: boolean, 
     length: StoryLength,
     narratorVoice: VoiceStyle,
-    char1Voice: VoiceStyle,
-    char2Voice: VoiceStyle
+    characterVoice: VoiceStyle
   ) => {
     setIsLoading(true);
     setError(null);
     setStory(null);
+    setProgress({ message: 'Iniciando...', value: 0 });
+
     try {
-      const result = await generateStoryAndCover(idea, includeDialogues, length, narratorVoice, char1Voice, char2Voice);
+      const result = await generateStoryAndCover(
+          idea, 
+          includeDialogues, 
+          length, 
+          narratorVoice, 
+          characterVoice, 
+          (message, value) => setProgress({ message, value })
+      );
       setStory(result);
     } catch (err) {
         if (err instanceof Error) {
@@ -36,15 +45,32 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleRegenerateCover = async () => {
+    if (!story) return;
+    
+    try {
+        const newCoverUrl = await regenerateCoverImage(story.originalIdea);
+        setStory(prev => prev ? { ...prev, coverImageUrl: newCoverUrl } : null);
+    } catch (err) {
+        console.error("Failed to regenerate cover:", err);
+        // Optional: Add a specific toast notification here
+        // For now, we let the component handle the UI state reset via the promise rejection
+        throw err; 
+    }
+  };
+
   const handleReset = () => {
     setStory(null);
     setError(null);
+    setProgress({ message: '', value: 0 });
   };
 
   const renderContent = () => {
-    if (isLoading) {
-      return <LoadingView />;
+    if (isLoading && !progress.message) {
+        // Fallback if progress hasn't started updates yet (rare)
+       return <LoadingView />;
     }
+    
     if (error) {
       return (
         <div className="text-center animate-fade-in">
@@ -60,9 +86,17 @@ const App: React.FC = () => {
       );
     }
     if (story) {
-      return <StoryDisplay story={story} onReset={handleReset} />;
+      return <StoryDisplay story={story} onReset={handleReset} onRegenerateCover={handleRegenerateCover} />;
     }
-    return <StoryInputForm onSubmit={handleGenerateStory} isLoading={isLoading} />;
+    
+    return (
+        <StoryInputForm 
+            onSubmit={handleGenerateStory} 
+            isLoading={isLoading} 
+            progressMessage={progress.message}
+            progressValue={progress.value}
+        />
+    );
   };
 
   return (
